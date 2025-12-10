@@ -72,8 +72,22 @@ export const Login = () => {
   const onSubmit = async (data) => {
     console.log('🟢 FORM SUBMITTED!', { isSignup, data });
     console.log('🟢 This means validation passed!');
+    console.log('🟢 Form data received:', JSON.stringify(data, null, 2));
     setLoading(true);
     
+    // TEMPORARY: Skip authentication and go directly to dashboard
+    console.log('⚠️ DEMO MODE: Bypassing authentication');
+    
+    setTimeout(() => {
+      setLoading(false);
+      showToast('Welcome! (Demo Mode)', 'success');
+      navigate('/');
+    }, 1000);
+    
+    return;
+    
+    // Original authentication code (disabled for demo)
+    /*
     let result;
     if (isSignup) {
       console.log('🟢 Calling signup function...');
@@ -95,6 +109,7 @@ export const Login = () => {
       console.log('❌ FAILED:', result.error);
       showToast(result.error || MESSAGES.ERROR_AUTH, 'error');
     }
+    */
   };
 
   return (

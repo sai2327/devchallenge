@@ -21,6 +21,11 @@ import './App.css';
 const ProtectedRoute = ({ children }) => {
   const { currentUser, loading } = useAuthContext();
 
+  // TEMPORARY: Disable authentication check for demo mode
+  console.log('⚠️ DEMO MODE: Skipping auth check');
+  return children;
+
+  /* Original code (disabled for demo)
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -34,6 +39,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   return children;
+  */
 };
 
 // App Component

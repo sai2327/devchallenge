@@ -1,11 +1,13 @@
-export const Input = ({ 
+import { forwardRef } from 'react';
+
+export const Input = forwardRef(({ 
   label, 
   error, 
   type = 'text',
   className = '',
   containerClassName = '',
   ...props 
-}) => {
+}, ref) => {
   return (
     <div className={`mb-4 ${containerClassName}`}>
       {label && (
@@ -14,6 +16,7 @@ export const Input = ({
         </label>
       )}
       <input
+        ref={ref}
         type={type}
         className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
           error 
@@ -27,4 +30,4 @@ export const Input = ({
       )}
     </div>
   );
-};
+});
