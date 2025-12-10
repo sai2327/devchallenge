@@ -1,150 +1,111 @@
-# DevChallenge - Competitive Programming Social Platform
+# DevChallenge - Coding Challenge Tracker
 
-A modern web application built with React, Firebase, and TailwindCSS for competitive programmers to track progress, create challenges, and compete with friends.
+A collaborative platform for tracking coding challenges and competing with friends.
 
-## 🚀 Features
+## 🚀 Quick Deploy to Vercel
 
-- **Authentication**: Google, GitHub, LinkedIn, Microsoft OAuth + Email/Password
-- **Coding Stats**: Track LeetCode, CodeChef, HackerRank, CodeForces progress
-- **Groups & Challenges**: Create groups, set challenges, and compete
-- **Real-time Leaderboard**: Live ranking updates
-- **Profile Management**: Customize profile with avatar, bio, and coding profiles
-- **Dark Mode**: Toggle between light and dark themes
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sai2327/devchallenge)
 
-## 🛠️ Tech Stack
+### Prerequisites
+1. **Supabase Account** (FREE) - [Sign up here](https://supabase.com/)
+2. **Vercel Account** (FREE) - [Sign up here](https://vercel.com/)
 
-- **Frontend**: React 18+ with Hooks
-- **Build Tool**: Vite
-- **Styling**: TailwindCSS
-- **Routing**: React Router v6
-- **Forms**: React Hook Form + Zod
-- **State Management**: Context API + Zustand
-- **Backend**: Firebase (Auth, Firestore, Storage)
-- **Charts**: Recharts
+### Deployment Steps
 
-## 📦 Installation
+#### 1. Set Up Supabase (5 minutes)
+Follow the detailed guide: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
 
-1. Clone the repository:
+Quick summary:
+- Create new project at [supabase.com](https://supabase.com/)
+- Copy Project URL and anon key
+- Run the SQL schema (provided in setup guide)
+- Create storage buckets: `avatars` and `documents`
+
+#### 2. Deploy to Vercel (2 minutes)
+1. Click the "Deploy" button above
+2. Connect your GitHub account
+3. Add environment variables:
+   - `VITE_SUPABASE_URL` - Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` - Your Supabase anon key
+4. Click **Deploy**
+5. Wait 2-3 minutes
+6. Get your live URL! 🎉
+
+## 🔧 Local Development
+
 ```bash
-git clone <your-repo-url>
+# Clone the repository
+git clone https://github.com/sai2327/devchallenge.git
 cd devchallenge
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Create `.env.local` file:
-```bash
+# Create environment file
 cp .env.example .env.local
-```
 
-4. Add your Firebase configuration to `.env.local`
+# Add your Supabase credentials to .env.local
+# VITE_SUPABASE_URL=your_url_here
+# VITE_SUPABASE_ANON_KEY=your_key_here
 
-5. Start the development server:
-```bash
+# Start development server
 npm run dev
 ```
 
-## 🔧 Available Scripts
+Open [http://localhost:3000](http://localhost:3000)
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+## ✨ Features
 
-## 🔥 Firebase Setup
+- 🔐 **Authentication** - Email, Google, GitHub, Microsoft OAuth
+- 👥 **Groups** - Create private/public coding groups
+- 🏆 **Challenges** - Track coding challenges across platforms
+- 📊 **Leaderboards** - Compete with friends
+- 📈 **Stats Dashboard** - Visualize your progress
+- 🌙 **Dark Mode** - Easy on the eyes
+- 📱 **Responsive** - Works on all devices
 
-1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Enable Authentication (Google, GitHub, LinkedIn, Microsoft, Email/Password)
-3. Create Firestore Database
-4. Enable Cloud Storage
-5. Copy your Firebase config to `.env.local`
+## 🛠️ Tech Stack
 
-### Firestore Collections Structure:
+- **Frontend**: React 18 + Vite
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **Styling**: TailwindCSS
+- **Routing**: React Router v6
+- **Charts**: Recharts
+- **Validation**: Zod + React Hook Form
 
-```
-users/
-  {userId}/
-    displayName, email, photoURL, phone, bio, createdAt
-    codingProfiles: { leetcode, codechef, hackerrank, codeforces }
-    friends: [userId1, userId2, ...]
-    groups: [groupId1, groupId2, ...]
+## 📚 Documentation
 
-groups/
-  {groupId}/
-    name, description, createdBy, createdAt
-    members: [userId1, userId2, ...]
-    challenges: [challengeId1, challengeId2, ...]
+- [Supabase Setup Guide](./SUPABASE_SETUP.md) - Complete backend setup
+- [Environment Variables](./.env.example) - Configuration template
 
-challenges/
-  {challengeId}/
-    groupId, title, description, deadline, createdBy, createdAt
-    completedBy: [userId1, userId2, ...]
+## 🌐 Supported Coding Platforms
 
-leaderboard/
-  {groupId}/
-    rankings: [{ userId, points, challengesCompleted, rank }, ...]
-    lastUpdated
-```
+- LeetCode
+- CodeChef
+- HackerRank
+- Codeforces
 
-## 🎨 Design System
+## 🤝 Contributing
 
-### Colors:
-- Primary: `#2180A8`
-- Secondary: `#32B8C6`
-- Success: `#22C55E`
-- Error: `#C0152F`
-- Warning: `#E67F47`
-- Info: `#3B82F6`
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-### Typography:
-- Font: Inter (Google Fonts)
+## 📝 License
 
-## 📱 Pages
+MIT License - feel free to use this project for learning or personal use!
 
-- `/login` - Authentication page
-- `/` - Home dashboard
-- `/stats` - Coding statistics hub
-- `/profile` - User profile view
-- `/profile/edit` - Edit profile
-- `/challenges` - Groups hub
-- `/group/:groupId` - Group detail view
-- `/leaderboard/:groupId` - Full leaderboard
+## 💡 Need Help?
 
-## 🚀 Deployment
+- Check [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed setup instructions
+- Open an issue on GitHub
 
-### Deploy to Vercel:
-```bash
-npm install -g vercel
-vercel
-```
+## 🎉 Free Hosting!
 
-### Deploy to Firebase Hosting:
-```bash
-npm run build
-firebase deploy
-```
+Both Supabase and Vercel offer generous free tiers:
+- **Supabase Free**: 500MB database, 1GB storage, 50K users
+- **Vercel Free**: Unlimited deployments, 100GB bandwidth
 
-### Deploy to Netlify:
-```bash
-npm run build
-# Drag and drop the 'dist' folder to Netlify
-```
-
-## 📄 License
-
-MIT License
-
-## 👥 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
-## 📞 Support
-
-For support, email support@devchallenge.com or open an issue on GitHub.
-
----
-
-Built with ❤️ by the DevChallenge Team
+Perfect for personal projects and sharing with friends! 🚀
