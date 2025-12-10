@@ -28,9 +28,11 @@ export const Login = () => {
   const [userId, setUserId] = useState('');
 
   const schema = isSignup ? signupSchema : loginSchema;
-  const { register, handleSubmit, formState: { errors } } = useForm(schema);
+  const { register, handleSubmit, formState: { errors }, watch } = useForm(schema);
 
   console.log('🔵 Login component mounted', { isSignup, errors });
+  console.log('🔵 Form values:', watch());
+  console.log('🔵 Validation errors:', errors);
 
   const handleOAuthLogin = async (provider) => {
     console.log('🔵 OAuth login clicked:', provider);
@@ -66,6 +68,7 @@ export const Login = () => {
 
   const onSubmit = async (data) => {
     console.log('🟢 FORM SUBMITTED!', { isSignup, data });
+    console.log('🟢 This means validation passed!');
     setLoading(true);
     
     let result;
@@ -162,7 +165,16 @@ export const Login = () => {
         )}
 
         {/* Email/Password Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form 
+          onSubmit={handleSubmit(
+            onSubmit,
+            (errors) => {
+              console.log('❌ VALIDATION FAILED!', errors);
+              console.log('❌ This is why the form did not submit');
+            }
+          )} 
+          className="space-y-4"
+        >
           {isSignup && (
             <Input
               label="Display Name"
