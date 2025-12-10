@@ -28,11 +28,14 @@ export const Login = () => {
   const [userId, setUserId] = useState('');
 
   const schema = isSignup ? signupSchema : loginSchema;
-  const { register, handleSubmit, formState: { errors }, watch } = useForm(schema);
+  const { register, handleSubmit, formState: { errors }, watch, getValues } = useForm(schema);
 
   console.log('🔵 Login component mounted', { isSignup, errors });
-  console.log('🔵 Form values:', watch());
+  const formValues = watch();
+  console.log('🔵 Form values:', formValues);
   console.log('🔵 Validation errors:', errors);
+  console.log('🔵 Email length:', formValues.email?.length);
+  console.log('🔵 Password length:', formValues.password?.length);
 
   const handleOAuthLogin = async (provider) => {
     console.log('🔵 OAuth login clicked:', provider);
@@ -171,10 +174,24 @@ export const Login = () => {
             (errors) => {
               console.log('❌ VALIDATION FAILED!', errors);
               console.log('❌ This is why the form did not submit');
+              showToast('Please check the form for errors', 'error');
             }
           )} 
           className="space-y-4"
         >
+          {/* Debug: Show validation errors */}
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
+                Form Errors:
+              </p>
+              <ul className="text-xs text-red-700 dark:text-red-300 space-y-1">
+                {Object.entries(errors).map(([field, error]) => (
+                  <li key={field}>• {field}: {error.message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {isSignup && (
             <Input
               label="Display Name"
