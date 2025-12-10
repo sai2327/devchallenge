@@ -1,46 +1,36 @@
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  onSnapshot,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  orderBy,
-  limit,
-  startAfter,
-} from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './firebase';
 
 // ============ USER OPERATIONS ============
 
 export const getUserProfile = async (userId) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      return { id: userSnap.id, ...userSnap.data() };
-    }
-    return null;
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error getting user profile:', error);
     throw error;
   }
 };
 
-export const updateUserProfile = async (userId, data) => {
+export const updateUserProfile = async (userId, updates) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      ...data,
-      updatedAt: new Date().toISOString(),
-    });
+    const { data, error } = await supabase
+      .from('users')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .select();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error updating user profile:', error);
     throw error;
@@ -49,10 +39,24 @@ export const updateUserProfile = async (userId, data) => {
 
 export const addFriend = async (userId, friendId) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      friends: arrayUnion(friendId),
-    });
+    // Get current friends array
+    const { data: user } = await supabase
+      .from('users')
+      .select('friends')
+      .eq('id', userId)
+      .single();
+
+    const friends = user?.friends || [];
+    if (!friends.includes(friendId)) {
+      friends.push(friendId);
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ friends })
+      .eq('id', userId);
+
+    if (error) throw error;
   } catch (error) {
     console.error('Error adding friend:', error);
     throw error;
@@ -61,10 +65,20 @@ export const addFriend = async (userId, friendId) => {
 
 export const removeFriend = async (userId, friendId) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      friends: arrayRemove(friendId),
-    });
+    const { data: user } = await supabase
+      .from('users')
+      .select('friends')
+      .eq('id', userId)
+      .single();
+
+    const friends = (user?.friends || []).filter(id => id !== friendId);
+
+    const { error } = await supabase
+      .from('users')
+      .update({ friends })
+      .eq('id', userId);
+
+    if (error) throw error;
   } catch (error) {
     console.error('Error removing friend:', error);
     throw error;
@@ -74,20 +88,32 @@ export const removeFriend = async (userId, friendId) => {
 export const getFriends = async (friendIds) => {
   try {
     if (!friendIds || friendIds.length === 0) return [];
-    
-    const friendsData = await Promise.all(
-      friendIds.map(async (friendId) => {
-        const friendSnap = await getDoc(doc(db, 'users', friendId));
-        if (friendSnap.exists()) {
-          return { id: friendSnap.id, ...friendSnap.data() };
-        }
-        return null;
-      })
-    );
-    
-    return friendsData.filter(Boolean);
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .in('id', friendIds);
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     console.error('Error getting friends:', error);
+    throw error;
+  }
+};
+
+export const searchUsers = async (searchTerm) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .or(`display_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+      .limit(20);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error searching users:', error);
     throw error;
   }
 };
@@ -96,24 +122,16 @@ export const getFriends = async (friendIds) => {
 
 export const createGroup = async (groupData) => {
   try {
-    const groupRef = doc(collection(db, 'groups'));
-    const groupId = groupRef.id;
-    
-    await setDoc(groupRef, {
-      ...groupData,
-      groupId,
-      createdAt: new Date().toISOString(),
-      members: [groupData.createdBy],
-      challenges: [],
-    });
-    
-    // Add group to user's groups
-    const userRef = doc(db, 'users', groupData.createdBy);
-    await updateDoc(userRef, {
-      groups: arrayUnion(groupId),
-    });
-    
-    return groupId;
+    const { data, error } = await supabase
+      .from('groups')
+      .insert([{
+        ...groupData,
+        created_at: new Date().toISOString(),
+      }])
+      .select();
+
+    if (error) throw error;
+    return data[0];
   } catch (error) {
     console.error('Error creating group:', error);
     throw error;
@@ -122,78 +140,111 @@ export const createGroup = async (groupData) => {
 
 export const getGroup = async (groupId) => {
   try {
-    const groupRef = doc(db, 'groups', groupId);
-    const groupSnap = await getDoc(groupRef);
-    if (groupSnap.exists()) {
-      return { id: groupSnap.id, ...groupSnap.data() };
-    }
-    return null;
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*')
+      .eq('id', groupId)
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error getting group:', error);
     throw error;
   }
 };
 
-export const joinGroup = async (groupId, userId) => {
+export const getUserGroups = async (userId) => {
   try {
-    const groupRef = doc(db, 'groups', groupId);
-    await updateDoc(groupRef, {
-      members: arrayUnion(userId),
-    });
-    
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      groups: arrayUnion(groupId),
-    });
-  } catch (error) {
-    console.error('Error joining group:', error);
-    throw error;
-  }
-};
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*')
+      .contains('members', [userId]);
 
-export const leaveGroup = async (groupId, userId) => {
-  try {
-    const groupRef = doc(db, 'groups', groupId);
-    await updateDoc(groupRef, {
-      members: arrayRemove(userId),
-    });
-    
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      groups: arrayRemove(groupId),
-    });
-  } catch (error) {
-    console.error('Error leaving group:', error);
-    throw error;
-  }
-};
-
-export const getUserGroups = async (groupIds) => {
-  try {
-    if (!groupIds || groupIds.length === 0) return [];
-    
-    const groupsData = await Promise.all(
-      groupIds.map(async (groupId) => {
-        const groupSnap = await getDoc(doc(db, 'groups', groupId));
-        if (groupSnap.exists()) {
-          return { id: groupSnap.id, ...groupSnap.data() };
-        }
-        return null;
-      })
-    );
-    
-    return groupsData.filter(Boolean);
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     console.error('Error getting user groups:', error);
     throw error;
   }
 };
 
+export const updateGroup = async (groupId, updates) => {
+  try {
+    const { data, error } = await supabase
+      .from('groups')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', groupId)
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  } catch (error) {
+    console.error('Error updating group:', error);
+    throw error;
+  }
+};
+
 export const deleteGroup = async (groupId) => {
   try {
-    await deleteDoc(doc(db, 'groups', groupId));
+    const { error } = await supabase
+      .from('groups')
+      .delete()
+      .eq('id', groupId);
+
+    if (error) throw error;
   } catch (error) {
     console.error('Error deleting group:', error);
+    throw error;
+  }
+};
+
+export const addGroupMember = async (groupId, userId) => {
+  try {
+    const { data: group } = await supabase
+      .from('groups')
+      .select('members')
+      .eq('id', groupId)
+      .single();
+
+    const members = group?.members || [];
+    if (!members.includes(userId)) {
+      members.push(userId);
+    }
+
+    const { error } = await supabase
+      .from('groups')
+      .update({ members })
+      .eq('id', groupId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error adding group member:', error);
+    throw error;
+  }
+};
+
+export const removeGroupMember = async (groupId, userId) => {
+  try {
+    const { data: group } = await supabase
+      .from('groups')
+      .select('members')
+      .eq('id', groupId)
+      .single();
+
+    const members = (group?.members || []).filter(id => id !== userId);
+
+    const { error } = await supabase
+      .from('groups')
+      .update({ members })
+      .eq('id', groupId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error removing group member:', error);
     throw error;
   }
 };
@@ -202,23 +253,16 @@ export const deleteGroup = async (groupId) => {
 
 export const createChallenge = async (challengeData) => {
   try {
-    const challengeRef = doc(collection(db, 'challenges'));
-    const challengeId = challengeRef.id;
-    
-    await setDoc(challengeRef, {
-      ...challengeData,
-      challengeId,
-      createdAt: new Date().toISOString(),
-      completedBy: [],
-    });
-    
-    // Add challenge to group
-    const groupRef = doc(db, 'groups', challengeData.groupId);
-    await updateDoc(groupRef, {
-      challenges: arrayUnion(challengeId),
-    });
-    
-    return challengeId;
+    const { data, error } = await supabase
+      .from('challenges')
+      .insert([{
+        ...challengeData,
+        created_at: new Date().toISOString(),
+      }])
+      .select();
+
+    if (error) throw error;
+    return data[0];
   } catch (error) {
     console.error('Error creating challenge:', error);
     throw error;
@@ -227,156 +271,263 @@ export const createChallenge = async (challengeData) => {
 
 export const getChallenge = async (challengeId) => {
   try {
-    const challengeRef = doc(db, 'challenges', challengeId);
-    const challengeSnap = await getDoc(challengeRef);
-    if (challengeSnap.exists()) {
-      return { id: challengeSnap.id, ...challengeSnap.data() };
-    }
-    return null;
+    const { data, error } = await supabase
+      .from('challenges')
+      .select('*')
+      .eq('id', challengeId)
+      .single();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Error getting challenge:', error);
     throw error;
   }
 };
 
-export const getGroupChallenges = async (challengeIds) => {
+export const getGroupChallenges = async (groupId) => {
   try {
-    if (!challengeIds || challengeIds.length === 0) return [];
-    
-    const challengesData = await Promise.all(
-      challengeIds.map(async (challengeId) => {
-        const challengeSnap = await getDoc(doc(db, 'challenges', challengeId));
-        if (challengeSnap.exists()) {
-          return { id: challengeSnap.id, ...challengeSnap.data() };
-        }
-        return null;
-      })
-    );
-    
-    return challengesData.filter(Boolean);
+    const { data, error } = await supabase
+      .from('challenges')
+      .select('*')
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     console.error('Error getting group challenges:', error);
     throw error;
   }
 };
 
-export const completeChallenge = async (challengeId, userId) => {
+export const updateChallenge = async (challengeId, updates) => {
   try {
-    const challengeRef = doc(db, 'challenges', challengeId);
-    await updateDoc(challengeRef, {
-      completedBy: arrayUnion(userId),
-    });
+    const { data, error } = await supabase
+      .from('challenges')
+      .update(updates)
+      .eq('id', challengeId)
+      .select();
+
+    if (error) throw error;
+    return data[0];
   } catch (error) {
-    console.error('Error completing challenge:', error);
+    console.error('Error updating challenge:', error);
     throw error;
   }
 };
 
-export const deleteChallenge = async (challengeId, groupId) => {
+export const deleteChallenge = async (challengeId) => {
   try {
-    await deleteDoc(doc(db, 'challenges', challengeId));
-    
-    // Remove challenge from group
-    const groupRef = doc(db, 'groups', groupId);
-    await updateDoc(groupRef, {
-      challenges: arrayRemove(challengeId),
-    });
+    const { error } = await supabase
+      .from('challenges')
+      .delete()
+      .eq('id', challengeId);
+
+    if (error) throw error;
   } catch (error) {
     console.error('Error deleting challenge:', error);
     throw error;
   }
 };
 
+export const submitChallengeProgress = async (challengeId, userId, progress) => {
+  try {
+    const { data, error } = await supabase
+      .from('challenge_progress')
+      .upsert({
+        challenge_id: challengeId,
+        user_id: userId,
+        ...progress,
+        updated_at: new Date().toISOString(),
+      })
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  } catch (error) {
+    console.error('Error submitting challenge progress:', error);
+    throw error;
+  }
+};
+
+export const getChallengeProgress = async (challengeId) => {
+  try {
+    const { data, error } = await supabase
+      .from('challenge_progress')
+      .select(`
+        *,
+        users (
+          id,
+          user_id,
+          display_name,
+          photo_url
+        )
+      `)
+      .eq('challenge_id', challengeId);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error getting challenge progress:', error);
+    throw error;
+  }
+};
+
 // ============ LEADERBOARD OPERATIONS ============
 
-export const updateLeaderboard = async (groupId, userId, points) => {
+export const updateLeaderboard = async (groupId, userId, stats) => {
   try {
-    const leaderboardRef = doc(db, 'leaderboard', groupId);
-    const leaderboardSnap = await getDoc(leaderboardRef);
-    
-    if (leaderboardSnap.exists()) {
-      const data = leaderboardSnap.data();
-      const rankings = data.rankings || [];
-      const userIndex = rankings.findIndex(r => r.userId === userId);
-      
-      if (userIndex >= 0) {
-        rankings[userIndex].points += points;
-        rankings[userIndex].challengesCompleted += 1;
-      } else {
-        rankings.push({
-          userId,
-          points,
-          challengesCompleted: 1,
-          rank: rankings.length + 1,
-        });
-      }
-      
-      // Sort by points and update ranks
-      rankings.sort((a, b) => b.points - a.points);
-      rankings.forEach((r, index) => {
-        r.rank = index + 1;
-      });
-      
-      await updateDoc(leaderboardRef, {
-        rankings,
-        lastUpdated: new Date().toISOString(),
-      });
-    } else {
-      await setDoc(leaderboardRef, {
-        rankings: [{
-          userId,
-          points,
-          challengesCompleted: 1,
-          rank: 1,
-        }],
-        lastUpdated: new Date().toISOString(),
-      });
-    }
+    const { data, error } = await supabase
+      .from('leaderboard')
+      .upsert({
+        group_id: groupId,
+        user_id: userId,
+        ...stats,
+        updated_at: new Date().toISOString(),
+      })
+      .select();
+
+    if (error) throw error;
+    return data[0];
   } catch (error) {
     console.error('Error updating leaderboard:', error);
     throw error;
   }
 };
 
-export const getLeaderboard = async (groupId) => {
+export const getGroupLeaderboard = async (groupId) => {
   try {
-    const leaderboardRef = doc(db, 'leaderboard', groupId);
-    const leaderboardSnap = await getDoc(leaderboardRef);
-    if (leaderboardSnap.exists()) {
-      return leaderboardSnap.data();
-    }
-    return { rankings: [], lastUpdated: null };
+    const { data, error } = await supabase
+      .from('leaderboard')
+      .select(`
+        *,
+        users (
+          id,
+          user_id,
+          display_name,
+          photo_url
+        )
+      `)
+      .eq('group_id', groupId)
+      .order('total_score', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    return data || [];
   } catch (error) {
-    console.error('Error getting leaderboard:', error);
+    console.error('Error getting group leaderboard:', error);
+    throw error;
+  }
+};
+
+export const getGlobalLeaderboard = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('leaderboard')
+      .select(`
+        user_id,
+        total_score,
+        users (
+          id,
+          user_id,
+          display_name,
+          photo_url
+        )
+      `)
+      .order('total_score', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    // Aggregate scores by user
+    const userScores = {};
+    data?.forEach(entry => {
+      const userId = entry.user_id;
+      if (!userScores[userId]) {
+        userScores[userId] = {
+          user: entry.users,
+          totalScore: 0,
+        };
+      }
+      userScores[userId].totalScore += entry.total_score || 0;
+    });
+
+    return Object.values(userScores)
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .slice(0, 100);
+  } catch (error) {
+    console.error('Error getting global leaderboard:', error);
     throw error;
   }
 };
 
 // ============ REAL-TIME LISTENERS ============
 
-export const subscribeToUserProfile = (userId, callback) => {
-  const userRef = doc(db, 'users', userId);
-  return onSnapshot(userRef, (snapshot) => {
-    if (snapshot.exists()) {
-      callback({ id: snapshot.id, ...snapshot.data() });
-    }
-  });
+export const subscribeToGroup = (groupId, callback) => {
+  const channel = supabase
+    .channel(`group:${groupId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'groups',
+        filter: `id=eq.${groupId}`,
+      },
+      (payload) => {
+        callback(payload.new);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 };
 
-export const subscribeToGroup = (groupId, callback) => {
-  const groupRef = doc(db, 'groups', groupId);
-  return onSnapshot(groupRef, (snapshot) => {
-    if (snapshot.exists()) {
-      callback({ id: snapshot.id, ...snapshot.data() });
-    }
-  });
+export const subscribeToChallenges = (groupId, callback) => {
+  const channel = supabase
+    .channel(`challenges:${groupId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'challenges',
+        filter: `group_id=eq.${groupId}`,
+      },
+      () => {
+        // Fetch all challenges when any change occurs
+        getGroupChallenges(groupId).then(callback);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 };
 
 export const subscribeToLeaderboard = (groupId, callback) => {
-  const leaderboardRef = doc(db, 'leaderboard', groupId);
-  return onSnapshot(leaderboardRef, (snapshot) => {
-    if (snapshot.exists()) {
-      callback(snapshot.data());
-    }
-  });
+  const channel = supabase
+    .channel(`leaderboard:${groupId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'leaderboard',
+        filter: `group_id=eq.${groupId}`,
+      },
+      () => {
+        // Fetch leaderboard when any change occurs
+        getGroupLeaderboard(groupId).then(callback);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 };

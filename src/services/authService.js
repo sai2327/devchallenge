@@ -1,71 +1,63 @@
-import {
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  OAuthProvider,
-} from 'firebase/auth';
-import { auth } from './firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
-
-// OAuth Providers
-const googleProvider = new GoogleAuthProvider();
-const githubProvider = new GithubAuthProvider();
-const microsoftProvider = new OAuthProvider('microsoft.com');
-const linkedinProvider = new OAuthProvider('oidc.linkedin');
+import { supabase } from './firebase';
 
 // Generate unique user ID
 export const generateUserId = () => {
   return `USER${Date.now()}${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 };
 
-// Create user profile in Firestore
+// Create user profile in database
 const createUserProfile = async (user, additionalData = {}) => {
-  const userRef = doc(db, 'users', user.uid);
-  const snapshot = await getDoc(userRef);
+  const { data: existingUser } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
 
-  if (!snapshot.exists()) {
-    const { email, displayName, photoURL } = user;
-    const createdAt = new Date().toISOString();
+  if (!existingUser) {
     const userId = generateUserId();
+    const userProfile = {
+      id: user.id,
+      user_id: userId,
+      email: user.email,
+      display_name: additionalData.displayName || user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+      photo_url: user.user_metadata?.avatar_url || '',
+      phone: '',
+      bio: '',
+      created_at: new Date().toISOString(),
+      coding_profiles: {
+        leetcode: '',
+        codechef: '',
+        hackerrank: '',
+        codeforces: '',
+      },
+      friends: [],
+      groups: [],
+      ...additionalData,
+    };
 
-    try {
-      await setDoc(userRef, {
-        userId,
-        email,
-        displayName: displayName || email.split('@')[0],
-        photoURL: photoURL || '',
-        phone: '',
-        bio: '',
-        createdAt,
-        codingProfiles: {
-          leetcode: '',
-          codechef: '',
-          hackerrank: '',
-          codeforces: '',
-        },
-        friends: [],
-        groups: [],
-        ...additionalData,
-      });
-    } catch (error) {
+    const { error } = await supabase
+      .from('users')
+      .insert([userProfile]);
+
+    if (error) {
       console.error('Error creating user profile:', error);
       throw error;
     }
   }
-
-  return userRef;
 };
 
 // Google OAuth Login
 export const loginWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    await createUserProfile(result.user);
-    return result.user;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Google login error:', error);
     throw error;
@@ -75,9 +67,15 @@ export const loginWithGoogle = async () => {
 // GitHub OAuth Login
 export const loginWithGithub = async () => {
   try {
-    const result = await signInWithPopup(auth, githubProvider);
-    await createUserProfile(result.user);
-    return result.user;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('GitHub login error:', error);
     throw error;
@@ -87,21 +85,33 @@ export const loginWithGithub = async () => {
 // Microsoft OAuth Login
 export const loginWithMicrosoft = async () => {
   try {
-    const result = await signInWithPopup(auth, microsoftProvider);
-    await createUserProfile(result.user);
-    return result.user;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('Microsoft login error:', error);
     throw error;
   }
 };
 
-// LinkedIn OAuth Login
+// LinkedIn OAuth Login (Note: LinkedIn requires Azure setup with Supabase)
 export const loginWithLinkedin = async () => {
   try {
-    const result = await signInWithPopup(auth, linkedinProvider);
-    await createUserProfile(result.user);
-    return result.user;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'linkedin',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+
+    if (error) throw error;
+    return data;
   } catch (error) {
     console.error('LinkedIn login error:', error);
     throw error;
@@ -111,8 +121,13 @@ export const loginWithLinkedin = async () => {
 // Email/Password Login
 export const loginWithEmail = async (email, password) => {
   try {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return result.user;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+    return data.user;
   } catch (error) {
     console.error('Email login error:', error);
     throw error;
@@ -122,9 +137,23 @@ export const loginWithEmail = async (email, password) => {
 // Email/Password Signup
 export const signupWithEmail = async (email, password, displayName) => {
   try {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    await createUserProfile(result.user, { displayName });
-    return result.user;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: displayName,
+        },
+      },
+    });
+
+    if (error) throw error;
+    
+    if (data.user) {
+      await createUserProfile(data.user, { displayName });
+    }
+
+    return data.user;
   } catch (error) {
     console.error('Signup error:', error);
     throw error;
@@ -134,7 +163,8 @@ export const signupWithEmail = async (email, password, displayName) => {
 // Logout
 export const logout = async () => {
   try {
-    await signOut(auth);
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   } catch (error) {
     console.error('Logout error:', error);
     throw error;
