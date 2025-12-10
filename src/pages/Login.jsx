@@ -30,7 +30,10 @@ export const Login = () => {
   const schema = isSignup ? signupSchema : loginSchema;
   const { register, handleSubmit, formState: { errors } } = useForm(schema);
 
+  console.log('🔵 Login component mounted', { isSignup, errors });
+
   const handleOAuthLogin = async (provider) => {
+    console.log('🔵 OAuth login clicked:', provider);
     setLoading(true);
     let result;
     
@@ -62,21 +65,28 @@ export const Login = () => {
   };
 
   const onSubmit = async (data) => {
+    console.log('🟢 FORM SUBMITTED!', { isSignup, data });
     setLoading(true);
     
     let result;
     if (isSignup) {
+      console.log('🟢 Calling signup function...');
       result = await signup(data.email, data.password, data.displayName);
+      console.log('🟢 Signup result:', result);
     } else {
+      console.log('🟢 Calling login function...');
       result = await loginWithEmail(data.email, data.password);
+      console.log('🟢 Login result:', result);
     }
 
     setLoading(false);
 
     if (result.success) {
+      console.log('✅ SUCCESS! Redirecting...');
       showToast(isSignup ? MESSAGES.SIGNUP_SUCCESS : MESSAGES.LOGIN_SUCCESS, 'success');
       navigate('/');
     } else {
+      console.log('❌ FAILED:', result.error);
       showToast(result.error || MESSAGES.ERROR_AUTH, 'error');
     }
   };

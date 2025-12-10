@@ -21,11 +21,19 @@ export const Button = ({
     lg: 'px-6 py-3 text-lg',
   };
 
+  const handleClick = (e) => {
+    console.log('🔴 BUTTON CLICKED!', { type: props.type, disabled, loading });
+    if (props.onClick) {
+      props.onClick(e);
+    }
+  };
+
   return (
     <button
+      {...props}
+      onClick={handleClick}
       className={`rounded font-medium transition-colors duration-200 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled || loading}
-      {...props}
     >
       {loading ? (
         <span className="flex items-center justify-center">
