@@ -99,52 +99,57 @@ export const Login = () => {
           </p>
         </div>
 
-        {/* OAuth Buttons */}
-        <div className="space-y-3 mb-6">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleOAuthLogin('google')}
-            disabled={loading}
-          >
-            🔷 Continue with Google
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleOAuthLogin('github')}
-            disabled={loading}
-          >
-            🐙 Continue with GitHub
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleOAuthLogin('microsoft')}
-            disabled={loading}
-          >
-            🪟 Continue with Microsoft
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleOAuthLogin('linkedin')}
-            disabled={loading}
-          >
-            💼 Continue with LinkedIn
-          </Button>
-        </div>
+        {/* OAuth Buttons - Temporarily disabled until configured in Supabase */}
+        {/* Uncomment after setting up OAuth providers in Supabase Dashboard */}
+        {false && (
+          <>
+            <div className="space-y-3 mb-6">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleOAuthLogin('google')}
+                disabled={loading}
+              >
+                🔷 Continue with Google
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleOAuthLogin('github')}
+                disabled={loading}
+              >
+                🐙 Continue with GitHub
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleOAuthLogin('microsoft')}
+                disabled={loading}
+              >
+                🪟 Continue with Microsoft
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleOAuthLogin('linkedin')}
+                disabled={loading}
+              >
+                💼 Continue with LinkedIn
+              </Button>
+            </div>
 
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
-              Or continue with email
-            </span>
-          </div>
-        </div>
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Email/Password Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
