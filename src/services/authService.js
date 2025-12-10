@@ -137,6 +137,8 @@ export const loginWithEmail = async (email, password) => {
 // Email/Password Signup
 export const signupWithEmail = async (email, password, displayName) => {
   try {
+    console.log('Starting signup for:', email);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -144,13 +146,27 @@ export const signupWithEmail = async (email, password, displayName) => {
         data: {
           full_name: displayName,
         },
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
 
-    if (error) throw error;
+    console.log('Signup response:', { data, error });
+
+    if (error) {
+      console.error('Supabase signup error:', error);
+      throw error;
+    }
+    
+    // Check if email confirmation is required
+    if (data.user && !data.session) {
+      console.log('Email confirmation required');
+      throw new Error('Please check your email to confirm your account');
+    }
     
     if (data.user) {
+      console.log('Creating user profile...');
       await createUserProfile(data.user, { displayName });
+      console.log('User profile created successfully');
     }
 
     return data.user;
